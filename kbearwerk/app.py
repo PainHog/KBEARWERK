@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 import threading
 
@@ -10,7 +11,7 @@ import customtkinter as ctk
 from . import config as config_mod
 from . import theme
 from .version import APP_TITLE, __version__
-from .services import outlook, outbox
+from .services import outlook, outbox, coloring
 
 from .panels.dashboard import DashboardPanel
 from .panels.new_project import NewProjectPanel
@@ -122,10 +123,10 @@ class App(ctk.CTk):
 
         controls = ctk.CTkFrame(bar, fg_color="transparent")
         controls.grid(row=len(NAV) + 2, column=0, sticky="ew", padx=10, pady=(0, 4))
-        ctk.CTkButton(controls, text="✏️ Draw", width=90, height=30, font=theme.FONT_SMALL,
+        ctk.CTkButton(controls, text="✏️ Marker", width=90, height=30, font=theme.FONT_SMALL,
                       fg_color="transparent", border_width=1, border_color=theme.PRIMARY,
                       text_color=("#1F2937", "#E5E7EB"), hover_color=("#E4E8EE", "#2C2F33"),
-                      command=self.toggle_draw_mode).pack(side="left", padx=(0, 6))
+                      command=self.open_marker_panel).pack(side="left", padx=(0, 6))
         ctk.CTkButton(controls, text="🎨 Colors", width=90, height=30, font=theme.FONT_SMALL,
                       fg_color="transparent", border_width=1, border_color=theme.PRIMARY,
                       text_color=("#1F2937", "#E5E7EB"), hover_color=("#E4E8EE", "#2C2F33"),
@@ -351,6 +352,147 @@ class App(ctk.CTk):
             self._draw_overlay = None
             self._draw_bg = None
             self.set_status("Draw mode off.")
+
+    # -- marker panel & coloring ----------------------------------------
+    def open_marker_panel(self) -> None:
+        win = ctk.CTkToplevel(self)
+        win.title("Marker")
+        win.geometry("400x500")
+        win.transient(self)
+        win._img_refs = []
+
+        ctk.CTkLabel(win, text="Marker color", font=theme.FONT_CARD_TITLE).pack(anchor="w", padx=16, pady=(14, 2))
+        sw = ctk.CTkFrame(win, fg_color="transparent")
+        sw.pack(anchor="w", padx=16)
+        for col in ["#FF3B30", "#FF9500", "#FFCC00", "#34C759", "#007AFF", "#AF52DE", "#000000"]:
+            ctk.CTkButton(sw, text="", width=26, height=26, fg_color=col, hover_color=col,
+                          border_width=1, border_color="#888888",
+                          command=lambda c=col: setattr(self, "draw_color", c)).pack(side="left", padx=3, pady=4)
+
+        ctk.CTkButton(win, text="✏️  Free draw over the app", height=36,
+                      command=lambda: (win.destroy(), self._enter_draw())).pack(fill="x", padx=16, pady=(12, 6))
+
+        ctk.CTkLabel(win, text="Coloring pages", font=theme.FONT_CARD_TITLE).pack(anchor="w", padx=16, pady=(10, 2))
+        ctk.CTkButton(win, text="⬆  Upload a coloring page…", height=32,
+                      command=lambda: self._upload_coloring(win)).pack(anchor="w", padx=16)
+        gallery = ctk.CTkScrollableFrame(win, fg_color="transparent")
+        gallery.pack(fill="both", expand=True, padx=12, pady=8)
+        win._gallery = gallery
+        self._render_coloring_gallery(win)
+
+    def _upload_coloring(self, win) -> None:
+        from tkinter import filedialog, messagebox
+        path = filedialog.askopenfilename(
+            title="Choose a coloring page image",
+            filetypes=[("Images", "*.png *.jpg *.jpeg *.gif *.bmp *.webp"), ("All files", "*.*")],
+            parent=win)
+        if not path:
+            return
+        try:
+            coloring.add_page(path)
+        except Exception as exc:  # noqa: BLE001
+            messagebox.showerror("Couldn't add image", str(exc), parent=win)
+            return
+        self._render_coloring_gallery(win)
+
+    def _render_coloring_gallery(self, win) -> None:
+        gallery = win._gallery
+        for child in gallery.winfo_children():
+            child.destroy()
+        pages = coloring.list_pages()
+        if not pages:
+            ctk.CTkLabel(gallery, text="No coloring pages yet — upload one above.",
+                         font=theme.FONT_SMALL, text_color=theme.MUTED).pack(anchor="w")
+            return
+        for p in pages:
+            row = ctk.CTkFrame(gallery, fg_color=theme.SIDEBAR, corner_radius=6)
+            row.pack(fill="x", pady=2)
+            try:
+                from PIL import Image
+                thumb = ctk.CTkImage(Image.open(p), size=(48, 48))
+                win._img_refs.append(thumb)
+                ctk.CTkLabel(row, image=thumb, text="").pack(side="left", padx=6, pady=6)
+            except Exception:
+                pass
+            ctk.CTkLabel(row, text=os.path.basename(p), font=theme.FONT_SMALL, anchor="w").pack(side="left", padx=6)
+            ctk.CTkButton(row, text="Color", width=60,
+                          command=lambda pp=p: (win.destroy(), self.open_coloring_window(pp))).pack(side="right", padx=4)
+            ctk.CTkButton(row, text="✕", width=28, fg_color="transparent", text_color=theme.DANGER,
+                          hover_color="#E4E8EE",
+                          command=lambda pp=p: (coloring.remove_page(pp), self._render_coloring_gallery(win))).pack(side="right")
+
+    def open_coloring_window(self, path) -> None:
+        import tkinter as tk
+        from tkinter import messagebox
+        try:
+            from PIL import Image, ImageDraw, ImageTk
+        except Exception:
+            messagebox.showinfo("Coloring", "Image support isn't available here.", parent=self)
+            return
+        try:
+            base = Image.open(path).convert("RGB")
+        except Exception as exc:  # noqa: BLE001
+            messagebox.showerror("Coloring", f"Couldn't open the image:\n{exc}", parent=self)
+            return
+        base.thumbnail((860, 600))
+        st = {"color": self.draw_color, "last": None, "work": base.copy()}
+        st["draw"] = ImageDraw.Draw(st["work"])
+
+        win = ctk.CTkToplevel(self)
+        win.title("Coloring — " + os.path.basename(path))
+        win.transient(self)
+
+        palette = ctk.CTkFrame(win, fg_color="transparent")
+        palette.pack(fill="x", padx=8, pady=6)
+        for col in ["#FF3B30", "#FF9500", "#FFCC00", "#34C759", "#007AFF", "#AF52DE", "#8E8E93", "#000000"]:
+            ctk.CTkButton(palette, text="", width=26, height=26, fg_color=col, hover_color=col,
+                          border_width=1, border_color="#888888",
+                          command=lambda c=col: st.__setitem__("color", c)).pack(side="left", padx=2)
+        ctk.CTkButton(palette, text="Close", width=70, command=win.destroy).pack(side="right", padx=4)
+
+        canvas = tk.Canvas(win, width=st["work"].width, height=st["work"].height,
+                           highlightthickness=0, cursor="pencil")
+        canvas.pack(padx=8, pady=8)
+        tkimg = ImageTk.PhotoImage(st["work"])
+        win._img_refs = [tkimg]
+        canvas.create_image(0, 0, anchor="nw", image=tkimg)
+
+        def press(e):
+            st["last"] = (e.x, e.y)
+
+        def motion(e):
+            if st["last"]:
+                canvas.create_line(st["last"][0], st["last"][1], e.x, e.y,
+                                   fill=st["color"], width=6, capstyle="round", smooth=True)
+                st["draw"].line([st["last"], (e.x, e.y)], fill=st["color"], width=6)
+                st["last"] = (e.x, e.y)
+
+        def release(_e):
+            st["last"] = None
+
+        canvas.bind("<ButtonPress-1>", press)
+        canvas.bind("<B1-Motion>", motion)
+        canvas.bind("<ButtonRelease-1>", release)
+
+        def clear():
+            st["work"] = base.copy()
+            st["draw"] = ImageDraw.Draw(st["work"])
+            newimg = ImageTk.PhotoImage(st["work"])
+            win._img_refs.append(newimg)
+            canvas.delete("all")
+            canvas.create_image(0, 0, anchor="nw", image=newimg)
+
+        def save():
+            dest = coloring.colored_output_path(path)
+            try:
+                st["work"].save(dest)
+                self.set_status(f"Saved colored page: {dest}")
+                messagebox.showinfo("Saved", f"Saved:\n{dest}", parent=win)
+            except Exception as exc:  # noqa: BLE001
+                messagebox.showerror("Save", str(exc), parent=win)
+
+        ctk.CTkButton(palette, text="Save", width=70, command=save).pack(side="right", padx=4)
+        ctk.CTkButton(palette, text="Clear", width=70, command=clear).pack(side="right", padx=4)
 
     # -- background sync -------------------------------------------------
     def _bg(self, work, on_done=None) -> None:
