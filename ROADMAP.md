@@ -47,6 +47,14 @@ Status legend: ✅ built (scaffold; will be tailored to her real files) · 🟡 
 | 27 | Contacts by **nickname** (email hidden) | ✅ | pick "Carl"/"Ian", not the address |
 | 28 | Per-job **pull-list** (carry-over data) | ✅ | everything typed is remembered & pre-fills |
 | 29 | Activity log (proof a task was done) | ✅ | powers Home's recent activity + counts |
+| 30 | Search-as-launcher (find & Generate a document) | ✅ | type "CD Sheet" → Generate, no workflow |
+| 31 | Financials dashboard + invoicing + move-to-ledger | ✅ | held fund, month (per engineer), year; draft invoices |
+| 32 | Sync-status visibility (✓ / ☁ / ⏳) | ✅ | reads cloud file attributes; shown on Home |
+| 33 | Convert document → PDF | ✅ | Word/LibreOffice; "Also save a PDF" + standalone |
+| 34 | Dark mode by default + theme-aware tables | ✅ | no white glare; light/system available |
+| 35 | Collapsible sections (declutter primitive) | 🟡 | built; apply per-panel with her input |
+| 36 | Color menu (text hex) + draw-on-screen mode | ✅ | pencil/marker, click clears & exits, input blocked |
+| 37 | Headless GUI audit (every panel, under Xvfb) | ✅ | 23 GUI checks + 15 engine tests green |
 
 ## What we still need from her (to make it precise)
 - The real **folder template** (exact sub-folder names under a job).

@@ -52,15 +52,7 @@ class ProjectListPanel(BasePanel):
         holder.grid_columnconfigure(0, weight=1)
         holder.grid_rowconfigure(0, weight=1)
 
-        style = ttk.Style()
-        try:
-            style.theme_use("clam")
-        except Exception:
-            pass
-        style.configure("KB.Treeview", rowheight=26, font=("Segoe UI", 11),
-                        background="#FFFFFF", fieldbackground="#FFFFFF")
-        style.configure("KB.Treeview.Heading", font=("Segoe UI Semibold", 11))
-
+        theme.style_treeview(ttk.Style(), "KB.Treeview")
         self.tree = ttk.Treeview(holder, show="headings", style="KB.Treeview", height=16)
         vsb = ttk.Scrollbar(holder, orient="vertical", command=self.tree.yview)
         hsb = ttk.Scrollbar(holder, orient="horizontal", command=self.tree.xview)

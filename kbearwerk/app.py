@@ -24,6 +24,7 @@ from .panels.needed import NeededPanel
 from .panels.meeting_checklist import MeetingChecklistPanel
 from .panels.schedule import SchedulePanel
 from .panels.billing import BillingPanel
+from .panels.financials import FinancialsPanel
 from .panels.invoices import InvoicesPanel
 from .panels.settings import SettingsPanel
 
@@ -46,6 +47,7 @@ NAV = [
     ("observations", "Observations", "\U0001F50D", ObservationsPanel),
     ("needed", "Needed", "\U0001F4CC", NeededPanel),
     ("billing", "Billing", "\U0001F4B5", BillingPanel),
+    ("financials", "Financials", "\U0001F4CA", FinancialsPanel),
     ("invoices", "Held Invoices", "\U0001F9FE", InvoicesPanel),
     ("meeting", "Meeting Checklist", "✅", MeetingChecklistPanel),
     ("schedule", "Schedule", "\U0001F4C5", SchedulePanel),
@@ -59,7 +61,10 @@ class App(ctk.CTk):
     def __init__(self):
         super().__init__()
         self.config_data = config_mod.load()
-        theme.apply(self.config_data.get("appearance", "light"))
+        theme.apply(self.config_data.get("appearance", "dark"),
+                    self.config_data.get("custom_text_color", ""))
+        self.draw_color = self.config_data.get("draw_color", "#FF3B30")
+        self._draw_overlay = None
 
         # Enable OS drag-and-drop on the whole app if the library loaded.
         self._dnd_ok = False
@@ -70,7 +75,8 @@ class App(ctk.CTk):
             except Exception:
                 self._dnd_ok = False
 
-        self.current_job = None  # set by open_job(), read by the Job panel
+        self.current_job = None       # set by open_job(), read by the Job panel
+        self.pending_template = None  # set by open_template(), read by Documents
 
         self.title(APP_TITLE)
         self.geometry("1180x760")
@@ -114,8 +120,19 @@ class App(ctk.CTk):
             btn.grid(row=i, column=0, sticky="ew", padx=10, pady=1)
             self._nav_buttons[key] = btn
 
+        controls = ctk.CTkFrame(bar, fg_color="transparent")
+        controls.grid(row=len(NAV) + 2, column=0, sticky="ew", padx=10, pady=(0, 4))
+        ctk.CTkButton(controls, text="✏️ Draw", width=90, height=30, font=theme.FONT_SMALL,
+                      fg_color="transparent", border_width=1, border_color=theme.PRIMARY,
+                      text_color=("#1F2937", "#E5E7EB"), hover_color=("#E4E8EE", "#2C2F33"),
+                      command=self.toggle_draw_mode).pack(side="left", padx=(0, 6))
+        ctk.CTkButton(controls, text="🎨 Colors", width=90, height=30, font=theme.FONT_SMALL,
+                      fg_color="transparent", border_width=1, border_color=theme.PRIMARY,
+                      text_color=("#1F2937", "#E5E7EB"), hover_color=("#E4E8EE", "#2C2F33"),
+                      command=self.open_colors).pack(side="left")
+
         ctk.CTkLabel(bar, text=f"v{__version__}", font=theme.FONT_SMALL,
-                     text_color=theme.MUTED).grid(row=len(NAV) + 2, column=0, sticky="w", padx=18, pady=(0, 12))
+                     text_color=theme.MUTED).grid(row=len(NAV) + 3, column=0, sticky="w", padx=18, pady=(0, 12))
 
     def _build_content(self) -> None:
         self.content = ctk.CTkFrame(self, fg_color=theme.PAGE_BG, corner_radius=0)
@@ -166,6 +183,11 @@ class App(ctk.CTk):
         self.current_job = context
         self.show_panel("job")
 
+    def open_template(self, name: str) -> None:
+        """Jump straight to the Documents panel with a template selected."""
+        self.pending_template = name
+        self.show_panel("documents")
+
     # -- drag and drop ---------------------------------------------------
     def register_drop(self, widget, callback) -> None:
         """Make ``widget`` accept a dropped file, calling ``callback(path)``.
@@ -200,10 +222,135 @@ class App(ctk.CTk):
         self._refresh_env_label()
 
     def reload_config(self) -> None:
-        theme.apply(self.config_data.get("appearance", "light"))
+        theme.apply(self.config_data.get("appearance", "dark"),
+                    self.config_data.get("custom_text_color", ""))
+        self.draw_color = self.config_data.get("draw_color", self.draw_color)
         self._refresh_env_label()
-        if self._current and self._current in self._panels:
-            self._panels[self._current].on_show()
+        self._rebuild_panels()
+
+    def _rebuild_panels(self) -> None:
+        """Recreate panels so a theme / text-color change takes full effect."""
+        current = self._current or "dashboard"
+        for panel in list(self._panels.values()):
+            try:
+                panel.destroy()
+            except Exception:
+                pass
+        self._panels = {}
+        self._current = None
+        self.show_panel(current)
+
+    # -- colors & draw mode ---------------------------------------------
+    def open_colors(self) -> None:
+        win = ctk.CTkToplevel(self)
+        win.title("Colors")
+        win.geometry("360x380")
+        win.transient(self)
+        ctk.CTkLabel(win, text="Appearance", font=theme.FONT_CARD_TITLE).pack(anchor="w", padx=16, pady=(16, 2))
+        mode = ctk.CTkOptionMenu(win, values=["dark", "light", "system"], command=self._set_appearance)
+        mode.set(self.config_data.get("appearance", "dark"))
+        mode.pack(anchor="w", padx=16)
+
+        ctk.CTkLabel(win, text="Text color (hex)", font=theme.FONT_CARD_TITLE).pack(anchor="w", padx=16, pady=(16, 2))
+        row = ctk.CTkFrame(win, fg_color="transparent")
+        row.pack(anchor="w", padx=16, fill="x")
+        tc = ctk.CTkEntry(row, placeholder_text="#E6E6E6", width=120)
+        tc.insert(0, self.config_data.get("custom_text_color", ""))
+        tc.pack(side="left")
+        ctk.CTkButton(row, text="Apply", width=64, command=lambda: self._set_text_color(tc.get())).pack(side="left", padx=6)
+        ctk.CTkButton(row, text="Reset", width=64, command=lambda: self._set_text_color("")).pack(side="left")
+
+        ctk.CTkLabel(win, text="Marker color (for Draw)", font=theme.FONT_CARD_TITLE).pack(anchor="w", padx=16, pady=(16, 2))
+        sw = ctk.CTkFrame(win, fg_color="transparent")
+        sw.pack(anchor="w", padx=16)
+        for col in ["#FF3B30", "#FF9500", "#FFCC00", "#34C759", "#007AFF", "#AF52DE", "#000000", "#FFFFFF"]:
+            ctk.CTkButton(sw, text="", width=28, height=28, fg_color=col, hover_color=col,
+                          border_width=1, border_color="#888888",
+                          command=lambda c=col: self._set_draw_color(c)).pack(side="left", padx=3, pady=4)
+        ctk.CTkButton(win, text="✏️  Start drawing",
+                      command=lambda: (win.destroy(), self.toggle_draw_mode())).pack(anchor="w", padx=16, pady=18)
+
+    def _set_appearance(self, mode) -> None:
+        self.config_data["appearance"] = mode
+        self.save_config()
+        self.reload_config()
+
+    def _set_text_color(self, hexval) -> None:
+        hexval = (hexval or "").strip()
+        if hexval and not re.fullmatch(r"#[0-9A-Fa-f]{6}", hexval):
+            self.set_status("Text color must be a hex code like #E6E6E6.")
+            return
+        self.config_data["custom_text_color"] = hexval
+        self.save_config()
+        self.reload_config()
+
+    def _set_draw_color(self, col) -> None:
+        self.draw_color = col
+        self.config_data["draw_color"] = col
+        self.save_config()
+        self.set_status(f"Marker color set to {col}.")
+
+    def toggle_draw_mode(self) -> None:
+        if self._draw_overlay is not None:
+            self._exit_draw()
+        else:
+            self._enter_draw()
+
+    def _enter_draw(self) -> None:
+        import tkinter as tk
+        self.update_idletasks()
+        canvas = tk.Canvas(self, highlightthickness=0, bd=0, cursor="pencil")
+        canvas.place(x=0, y=0, relwidth=1, relheight=1)
+        try:
+            from PIL import ImageGrab, ImageTk
+            x, y = self.winfo_rootx(), self.winfo_rooty()
+            w, h = self.winfo_width(), self.winfo_height()
+            self._draw_bg = ImageTk.PhotoImage(ImageGrab.grab(bbox=(x, y, x + w, y + h)))
+            canvas.create_image(0, 0, anchor="nw", image=self._draw_bg)
+        except Exception:
+            canvas.configure(bg="#1A1A1A")
+            canvas.create_text(20, 20, anchor="nw", fill="#888888", font=("Segoe UI", 12),
+                               text="Draw mode — drag to draw; single click clears & exits (Esc).")
+        self._draw_overlay = canvas
+        self._draw_last = None
+        self._draw_moved = False
+        canvas.bind("<ButtonPress-1>", self._draw_press)
+        canvas.bind("<B1-Motion>", self._draw_motion)
+        canvas.bind("<ButtonRelease-1>", self._draw_release)
+        self.bind_all("<Escape>", lambda _e: self._exit_draw())
+        canvas.focus_set()
+        self.set_status("Draw mode ON — drag to mark up; single click clears & exits.")
+
+    def _draw_press(self, e) -> None:
+        self._draw_last = (e.x, e.y)
+        self._draw_moved = False
+
+    def _draw_motion(self, e) -> None:
+        if self._draw_overlay is not None and self._draw_last is not None:
+            self._draw_overlay.create_line(self._draw_last[0], self._draw_last[1], e.x, e.y,
+                                           fill=self.draw_color, width=4, capstyle="round", smooth=True)
+            self._draw_last = (e.x, e.y)
+            self._draw_moved = True
+
+    def _draw_release(self, e) -> None:
+        if not self._draw_moved:
+            self._exit_draw()   # a plain click clears everything and returns to usable
+        else:
+            self._draw_last = None
+
+    def _exit_draw(self) -> None:
+        if self._draw_overlay is not None:
+            try:
+                self.unbind_all("<Escape>")
+            except Exception:
+                pass
+            try:
+                self._draw_overlay.destroy()
+            except Exception:
+                pass
+            self._draw_overlay = None
+            self._draw_bg = None
+            self.set_status("Draw mode off.")
 
     # -- background sync -------------------------------------------------
     def _bg(self, work, on_done=None) -> None:

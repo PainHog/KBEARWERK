@@ -14,7 +14,7 @@ import customtkinter as ctk
 
 from .. import theme
 from .base import BasePanel
-from ..services import templates, files, reliable, jobdata, activity
+from ..services import templates, files, reliable, jobdata, activity, convert
 
 
 class DocumentsPanel(BasePanel):
@@ -41,6 +41,25 @@ class DocumentsPanel(BasePanel):
         btnrow.grid(row=1, column=0, sticky="w")
         self.ghost_button(btnrow, "＋ Add a template…", self.add_template, width=170).pack(side="left")
         self.ghost_button(btnrow, "Remove", self.remove_template, width=90).pack(side="left", padx=8)
+        self.ghost_button(btnrow, "Convert a document to PDF…", self.convert_dialog, width=230).pack(side="left", padx=8)
+
+    def convert_dialog(self) -> None:
+        src = self.pick_file("Choose a Word document to convert to PDF",
+                             [("Word documents", "*.docx"), ("All files", "*.*")])
+        if not src:
+            return
+
+        def work():
+            return convert.to_pdf(src)
+
+        def done(pdf):
+            self.show_info(f"PDF created:\n{pdf}", title="PDF ready")
+            try:
+                files.open_in_file_manager(os.path.dirname(pdf))
+            except Exception:
+                pass
+
+        self.run_async(work, done, busy="Converting to PDF…")
 
     def _template_names(self):
         names = [t.get("name", "") for t in self.config.get("templates", []) if t.get("name")]
@@ -175,8 +194,12 @@ class DocumentsPanel(BasePanel):
         self.ghost_button(holder, "＋ Add save location…", lambda: self.add_location(entry), width=200).grid(
             row=5, column=0, sticky="w", padx=18, pady=(0, 8))
 
+        self.pdf_var = ctk.StringVar(value="off")
+        ctk.CTkCheckBox(holder, text="Also save a PDF copy", variable=self.pdf_var,
+                        onvalue="on", offvalue="off").grid(row=6, column=0, sticky="w", padx=18, pady=(0, 6))
+
         self.primary_button(holder, "📄  Generate document", self.generate).grid(
-            row=6, column=0, sticky="w", padx=18, pady=(4, 16))
+            row=7, column=0, sticky="w", padx=18, pady=(4, 16))
 
     def _render_locations(self, entry) -> None:
         for child in self.loc_frame.winfo_children():
@@ -259,11 +282,23 @@ class DocumentsPanel(BasePanel):
                 return
             locations = [folder]
 
+        want_pdf = self.pdf_var.get() == "on"
+
         def work():
             # Fill locally first, then place into each folder (survives a desync).
             tmp = reliable.local_temp(filename)
             templates.fill_template(entry["path"], context, tmp)
-            return reliable.place_file(tmp, locations, filename, label=entry["name"])
+            written, queued = reliable.place_file(tmp, locations, filename, label=entry["name"])
+            if want_pdf:
+                try:
+                    pdf_tmp = convert.to_pdf(tmp)
+                    pdf_name = os.path.splitext(filename)[0] + ".pdf"
+                    pw, pq = reliable.place_file(pdf_tmp, locations, pdf_name, label=entry["name"] + " (PDF)")
+                    written += pw
+                    queued += pq
+                except convert.ConvertError:
+                    pass  # PDF is a bonus; don't fail the whole save
+            return written, queued
 
         def done(result):
             written, queued = result
@@ -281,6 +316,13 @@ class DocumentsPanel(BasePanel):
     def on_show(self) -> None:
         names = self._template_names()
         self.template_menu.configure(values=names)
+        # If search sent us here to generate a specific template, select it.
+        pending = getattr(self.app, "pending_template", None)
+        if pending and pending in names:
+            self.app.pending_template = None
+            self.template_menu.set(pending)
+            self._on_template_change(pending)
+            return
         current = self.template_menu.get()
         if current not in names:
             self.template_menu.set(names[0])

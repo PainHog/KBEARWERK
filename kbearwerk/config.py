@@ -65,6 +65,8 @@ DEFAULTS: Dict[str, Any] = {
         "send_emails": False,
         "sheet": "",
     },
+    # Blank invoice template (.docx) filled when she bills a job.
+    "invoice_template": "",
     # Documents every job folder should contain. The app scans the folder and
     # marks each item found/missing by looking for these keywords in file names.
     "required_documents": [
@@ -128,8 +130,10 @@ DEFAULTS: Dict[str, Any] = {
         "address": "",
         "phone": "",
     },
-    # UI preferences.
-    "appearance": "light",  # "light", "dark" or "system"
+    # UI preferences. Dark by default (easier on the eyes / less overstimulating).
+    "appearance": "dark",  # "light", "dark" or "system"
+    "custom_text_color": "",  # optional hex like "#E6E6E6" to override body text
+    "draw_color": "#FF3B30",  # default marker color for draw-on-screen mode
 }
 
 

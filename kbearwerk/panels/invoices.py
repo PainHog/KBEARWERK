@@ -51,13 +51,7 @@ class InvoicesPanel(BasePanel):
         holder.grid(row=0, column=0, sticky="nsew")
         holder.grid_columnconfigure(0, weight=1)
         holder.grid_rowconfigure(0, weight=1)
-        style = ttk.Style()
-        try:
-            style.theme_use("clam")
-        except Exception:
-            pass
-        style.configure("KBInv.Treeview", rowheight=26, font=("Segoe UI", 11))
-        style.configure("KBInv.Treeview.Heading", font=("Segoe UI Semibold", 11))
+        theme.style_treeview(ttk.Style(), "KBInv.Treeview")
         self.tree = ttk.Treeview(holder, show="headings", style="KBInv.Treeview",
                                  columns=self.COLUMNS, height=14)
         for col in self.COLUMNS:

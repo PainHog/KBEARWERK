@@ -13,3 +13,5 @@ tkinterdnd2>=0.4.2          # drag-and-drop files onto the app
 
 # Windows-only: drives Outlook + preserves complex Excel (dropdowns/checkboxes).
 pywin32>=306 ; sys_platform == "win32"
+# Windows-only: convert Word documents to PDF using Word itself.
+docx2pdf>=0.1.8 ; sys_platform == "win32"

@@ -35,8 +35,34 @@ FONT_NAV = ("Segoe UI", 14)
 FONT_BUTTON = ("Segoe UI Semibold", 13)
 
 
-def apply(appearance: str = "light") -> None:
-    """Set global appearance mode and color theme."""
-    mode = appearance if appearance in ("light", "dark", "system") else "light"
+def apply(appearance: str = "dark", text_color: str = "") -> None:
+    """Set global appearance mode, color theme, and optional text-color override."""
+    mode = appearance if appearance in ("light", "dark", "system") else "dark"
     ctk.set_appearance_mode(mode)
-    ctk.set_default_color_theme("blue")
+    ctk.set_default_color_theme("blue")  # reloads theme dict (resets any override)
+    if text_color:
+        try:
+            ctk.ThemeManager.theme["CTkLabel"]["text_color"] = text_color
+        except Exception:
+            pass
+
+
+def style_treeview(style, name: str) -> None:
+    """Style a ttk.Treeview to match the current light/dark appearance.
+
+    Without this a table renders bright white in dark mode (overstimulating).
+    """
+    try:
+        style.theme_use("clam")
+    except Exception:
+        pass
+    dark = ctk.get_appearance_mode() == "Dark"
+    if dark:
+        bg, fg, head_bg, sel = "#2B2B2B", "#E5E7EB", "#202124", PRIMARY
+    else:
+        bg, fg, head_bg, sel = "#FFFFFF", "#1F2937", "#F2F4F7", ACCENT
+    style.configure(name, background=bg, fieldbackground=bg, foreground=fg,
+                    rowheight=26, font=("Segoe UI", 11), borderwidth=0)
+    style.map(name, background=[("selected", sel)], foreground=[("selected", "#FFFFFF")])
+    style.configure(name + ".Heading", background=head_bg, foreground=fg,
+                    font=("Segoe UI Semibold", 11))

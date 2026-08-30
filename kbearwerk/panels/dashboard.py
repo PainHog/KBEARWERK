@@ -16,7 +16,7 @@ import customtkinter as ctk
 
 from .. import theme
 from .base import BasePanel
-from ..services import search, files, activity, outbox
+from ..services import search, files, activity, outbox, produced, syncstatus
 
 
 def _first(row, keys):
@@ -70,22 +70,29 @@ class DashboardPanel(BasePanel):
             return
 
         def work():
-            return search.search(self.config, query), search.search_files(self.config, query)
+            return (search.search(self.config, query),
+                    search.search_files(self.config, query),
+                    search.search_templates(self.config, query))
         self.run_async(work, self._render_results, busy=f"Searching for '{query}'…")
 
     def _render_results(self, result) -> None:
-        hits, file_hits = result
+        hits, file_hits, tpl_hits = result
         for child in self.results.winfo_children():
             child.destroy()
-        if not hits and not file_hits:
+        if not hits and not file_hits and not tpl_hits:
             ctk.CTkLabel(self.results,
                          text="No matches. Set your work folder and lists in Settings so search can find things.",
                          font=theme.FONT_SMALL, text_color=theme.MUTED, anchor="w").grid(row=0, column=0, sticky="w")
             self.app.set_status("No matches found.")
             return
-        self.app.set_status(f"Found {len(hits)} job(s) and {len(file_hits)} file(s)/folder(s).")
+        self.app.set_status(f"Found {len(tpl_hits)} document(s), {len(hits)} job(s), {len(file_hits)} file(s)/folder(s).")
 
         r = 0
+        if tpl_hits:
+            ctk.CTkLabel(self.results, text="Documents to generate", font=theme.FONT_CARD_TITLE,
+                         anchor="w").grid(row=r, column=0, sticky="w", pady=(2, 4)); r += 1
+            for tpl in tpl_hits:
+                self._template_row(r, tpl); r += 1
         if hits:
             ctk.CTkLabel(self.results, text="Jobs (from your lists)", font=theme.FONT_CARD_TITLE,
                          anchor="w").grid(row=r, column=0, sticky="w", pady=(2, 4)); r += 1
@@ -154,6 +161,21 @@ class DashboardPanel(BasePanel):
             files.open_in_file_manager(folder)
         except Exception as exc:  # noqa: BLE001
             self.show_error(str(exc))
+
+    def _template_row(self, i, tpl) -> None:
+        row = ctk.CTkFrame(self.results, fg_color=theme.SIDEBAR, corner_radius=8)
+        row.grid(row=i, column=0, sticky="ew", pady=2)
+        row.grid_columnconfigure(0, weight=1)
+        text = ctk.CTkFrame(row, fg_color="transparent")
+        text.grid(row=0, column=0, sticky="w", padx=12, pady=6)
+        ctk.CTkLabel(text, text=f"📝  {tpl.name}", font=theme.FONT_BODY, anchor="w").pack(anchor="w")
+        ctk.CTkLabel(text, text="blank template — fill & generate", font=theme.FONT_SMALL,
+                     text_color=theme.MUTED, anchor="w").pack(anchor="w")
+        btns = ctk.CTkFrame(row, fg_color="transparent")
+        btns.grid(row=0, column=1, sticky="e", padx=10)
+        self.accent_button(btns, "Generate", lambda n=tpl.name: self.app.open_template(n), width=100).pack(side="right", padx=4)
+        if tpl.path:
+            self.ghost_button(btns, "Open blank", lambda p=tpl.path: self._open_folder(p), width=100).pack(side="right", padx=4)
 
     # -- accomplishments -------------------------------------------------
     def _build_accomplishments(self) -> None:
@@ -275,6 +297,21 @@ class DashboardPanel(BasePanel):
         ctk.CTkLabel(self._status_rows, text=pend_txt, font=theme.FONT_BODY,
                      text_color=(theme.WARNING if pend else theme.SUCCESS), anchor="w").grid(
             row=len(checks), column=0, sticky="w", pady=(6, 2))
+
+        # Recent documents with their live sync marker (✓ synced / ☁ on PC / ✗).
+        docs = produced.recent(6)
+        if docs:
+            ctk.CTkLabel(self._status_rows, text="Recent documents", font=theme.FONT_CARD_TITLE,
+                         anchor="w").grid(row=len(checks) + 1, column=0, sticky="w", pady=(8, 2))
+            for j, d in enumerate(docs):
+                state = syncstatus.file_state(d.get("path", ""))
+                color = {syncstatus.SYNCED: theme.SUCCESS, syncstatus.ON_DEVICE: theme.ACCENT,
+                         syncstatus.PENDING: theme.WARNING, syncstatus.MISSING: theme.DANGER}.get(state, theme.MUTED)
+                name = os.path.basename(d.get("path", "")) or d.get("label", "")
+                ctk.CTkLabel(self._status_rows,
+                             text=f"{syncstatus.icon(state)}  {name}   ({syncstatus.label(state)})",
+                             font=theme.FONT_SMALL, text_color=color, anchor="w").grid(
+                    row=len(checks) + 2 + j, column=0, sticky="w", pady=1)
 
     def on_show(self) -> None:
         self._refresh_status()

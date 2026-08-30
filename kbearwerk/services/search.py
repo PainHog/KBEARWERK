@@ -36,6 +36,26 @@ class FileHit:
     job: str = ""      # the top-level job folder it lives under (context)
 
 
+@dataclass
+class TemplateHit:
+    name: str          # template name (e.g. "CD Sheet")
+    path: str          # blank template file on disk
+
+
+def search_templates(config: Dict[str, Any], query: str) -> List[TemplateHit]:
+    """Match registered document templates by name, so she can search 'CD Sheet'
+    and generate it directly without opening a panel."""
+    q = (query or "").strip().lower()
+    if not q:
+        return []
+    hits: List[TemplateHit] = []
+    for t in config.get("templates", []):
+        name = t.get("name", "")
+        if name and q in name.lower():
+            hits.append(TemplateHit(name=name, path=t.get("path", "")))
+    return hits
+
+
 # Header names we prefer when building a title/subtitle. Matched loosely.
 _TITLE_KEYS = ["project number", "project no", "job number", "job #", "job no", "number", "project", "project name", "job name", "name"]
 _CLIENT_KEYS = ["client", "client name", "owner", "customer"]

@@ -83,26 +83,66 @@ class BasePanel(ctk.CTkFrame):
         inner.grid_columnconfigure(0, weight=1)
         return inner
 
+    def collapsible_card(self, title: str, description: Optional[str] = None,
+                         collapsed: bool = False) -> ctk.CTkFrame:
+        """A card whose body hides behind a ▸/▾ header - for a low-clutter screen.
+
+        Returns the inner frame to fill. Click the header to show/hide it.
+        """
+        outer = ctk.CTkFrame(self.body, fg_color=theme.CARD, corner_radius=12,
+                             border_width=1, border_color=theme.CARD_BORDER)
+        outer.pack(fill="x", pady=(0, 14))
+        outer.grid_columnconfigure(0, weight=1)
+        inner = ctk.CTkFrame(outer, fg_color="transparent")
+        inner.grid_columnconfigure(0, weight=1)
+        state = {"open": not collapsed}
+
+        def arrow():
+            return "▾" if state["open"] else "▸"
+
+        def toggle():
+            state["open"] = not state["open"]
+            header.configure(text=f"{arrow()}   {title}")
+            if state["open"]:
+                inner.grid(row=1, column=0, sticky="ew", padx=18, pady=(0, 16))
+            else:
+                inner.grid_remove()
+
+        header = ctk.CTkButton(outer, text=f"{arrow()}   {title}", anchor="w",
+                               font=theme.FONT_CARD_TITLE, fg_color="transparent",
+                               text_color=("#1F2937", "#E5E7EB"), hover_color=theme.SIDEBAR,
+                               command=toggle)
+        header.grid(row=0, column=0, sticky="ew", padx=8, pady=(10, 2))
+        if description:
+            ctk.CTkLabel(outer, text=description, font=theme.FONT_SMALL, text_color=theme.MUTED,
+                         anchor="w", justify="left").grid(row=2, column=0, sticky="w", padx=18, pady=(0, 6))
+        if not collapsed:
+            inner.grid(row=1, column=0, sticky="ew", padx=18, pady=(0, 16))
+        return inner
+
     def primary_button(self, parent, text, command, **kw) -> ctk.CTkButton:
+        kw.setdefault("height", 36)
+        kw.setdefault("corner_radius", 8)
         return ctk.CTkButton(
             parent, text=text, command=command, font=theme.FONT_BUTTON,
-            fg_color=theme.PRIMARY, hover_color=theme.PRIMARY_HOVER,
-            height=36, corner_radius=8, **kw,
+            fg_color=theme.PRIMARY, hover_color=theme.PRIMARY_HOVER, **kw,
         )
 
     def accent_button(self, parent, text, command, **kw) -> ctk.CTkButton:
+        kw.setdefault("height", 34)
+        kw.setdefault("corner_radius", 8)
         return ctk.CTkButton(
             parent, text=text, command=command, font=theme.FONT_BUTTON,
-            fg_color=theme.ACCENT, hover_color=theme.ACCENT_HOVER,
-            height=34, corner_radius=8, **kw,
+            fg_color=theme.ACCENT, hover_color=theme.ACCENT_HOVER, **kw,
         )
 
     def ghost_button(self, parent, text, command, **kw) -> ctk.CTkButton:
+        kw.setdefault("height", 34)
+        kw.setdefault("corner_radius", 8)
         return ctk.CTkButton(
             parent, text=text, command=command, font=theme.FONT_BUTTON,
             fg_color="transparent", hover_color=theme.SIDEBAR,
-            text_color=theme.PRIMARY, border_width=1, border_color=theme.PRIMARY,
-            height=34, corner_radius=8, **kw,
+            text_color=theme.PRIMARY, border_width=1, border_color=theme.PRIMARY, **kw,
         )
 
     # -- threading -------------------------------------------------------
@@ -117,16 +157,24 @@ class BasePanel(ctk.CTkFrame):
         if busy:
             self.app.set_status(busy)
 
+        def post(fn):
+            # Schedule back on the UI thread, but never crash if the widget is
+            # gone (panel rebuilt on a theme change, or app closing).
+            try:
+                self.after(0, fn)
+            except Exception:
+                pass
+
         def runner():
             try:
                 result = work()
             except Exception as exc:  # noqa: BLE001 - surfaced to the user
-                self.after(0, lambda e=exc: (on_error or self._default_error)(e))
+                post(lambda e=exc: (on_error or self._default_error)(e))
                 return
             if on_done:
-                self.after(0, lambda r=result: on_done(r))
+                post(lambda r=result: on_done(r))
             else:
-                self.after(0, lambda: self.app.set_status("Done."))
+                post(lambda: self.app.set_status("Done."))
 
         threading.Thread(target=runner, daemon=True).start()
 

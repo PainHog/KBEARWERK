@@ -250,6 +250,17 @@ class SettingsPanel(BasePanel):
         self.company_entry = ctk.CTkEntry(card, height=30)
         self.company_entry.insert(0, self.config.get("company", {}).get("name", ""))
         self.company_entry.grid(row=2, column=1, sticky="ew", pady=4)
+        ctk.CTkLabel(card, text="Invoice template (.docx)", font=theme.FONT_BODY).grid(row=3, column=0, sticky="w", padx=(0, 8), pady=4)
+        self.invoice_tpl_entry = ctk.CTkEntry(card, height=30)
+        self.invoice_tpl_entry.insert(0, self.config.get("invoice_template", ""))
+        self.invoice_tpl_entry.grid(row=3, column=1, sticky="ew", pady=4)
+        self.ghost_button(card, "Browse…", self._pick_invoice_tpl, width=90).grid(row=3, column=2, padx=(8, 0))
+
+    def _pick_invoice_tpl(self) -> None:
+        path = self.pick_file("Choose the invoice template", [("Word documents", "*.docx"), ("All files", "*.*")])
+        if path:
+            self.invoice_tpl_entry.delete(0, "end")
+            self.invoice_tpl_entry.insert(0, path)
 
     # -- appearance ------------------------------------------------------
     def _build_appearance(self) -> None:

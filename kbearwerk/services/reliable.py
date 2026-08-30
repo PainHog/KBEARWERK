@@ -15,7 +15,7 @@ import os
 import shutil
 from typing import Any, Dict, List, Tuple
 
-from . import excel, excel_com, outbox
+from . import excel, excel_com, outbox, produced
 from .files import unique_destination
 from ..config import config_dir
 
@@ -73,6 +73,7 @@ def place_file(local_src: str, dest_dirs: List[str], filename: str, label: str =
             dest = unique_destination(d, filename)
             shutil.copy2(local_src, dest)
             written.append(dest)
+            produced.record(dest, label)  # so Home can show its sync status
         except OSError:
             outbox.queue_file_copy(local_src, d, filename, label=label)
             queued.append(d)
