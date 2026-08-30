@@ -33,7 +33,9 @@ jobs:
         run: python -c "import kbearwerk.app; print('import OK')"
 
       - name: Run service tests
-        run: python -m pytest -q tests || echo "pytest not critical for build"
+        run: python tests/test_services.py
+        env:
+          PYTHONPATH: ${{ github.workspace }}
 
       - name: Build the .exe
         run: >
