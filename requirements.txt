@@ -1,0 +1,15 @@
+# KBEARWERK dependencies.
+# Install with:  pip install -r requirements.txt
+
+customtkinter>=5.2.2          # modern-looking GUI widgets
+darkdetect>=0.8.0             # light/dark detection (used by customtkinter)
+Pillow>=10.0.0               # images (customtkinter + seal/signature)
+openpyxl>=3.1.2              # read/write simple Excel lists
+python-docx>=1.1.0          # generate/read Word documents
+docxtpl>=0.16.7             # fill Word templates ({{ fields }}) + seal images
+pypdf>=4.0.0                # read text from dropped PDFs (proposal import)
+keyring>=24.0.0             # secure secret storage (Windows Credential Manager)
+tkinterdnd2>=0.4.2          # drag-and-drop files onto the app
+
+# Windows-only: drives Outlook + preserves complex Excel (dropdowns/checkboxes).
+pywin32>=306 ; sys_platform == "win32"
