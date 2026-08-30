@@ -59,10 +59,11 @@ class NewProjectPanel(BasePanel):
 
     # -- import from a document -----------------------------------------
     def _build_import(self) -> None:
-        card = self.card(
+        card = self.collapsible_card(
             "Start from a document (optional)",
             "Drag a proposal (PDF or Word) onto the box — or click it — and the app "
             "fills in what it can. Nothing is required; you can always type it yourself.",
+            collapsed=True,
         )
         card.grid_columnconfigure(0, weight=1)
         self.drop_zone = ctk.CTkFrame(card, fg_color=theme.SIDEBAR, corner_radius=10, height=66)
@@ -187,10 +188,11 @@ class NewProjectPanel(BasePanel):
 
     # -- manual steps ----------------------------------------------------
     def _build_manual(self) -> None:
-        card = self.card(
+        card = self.collapsible_card(
             "Manual — with a helping hand",
             "The app can't do these for you, but it opens the site and copies the "
             "project info so you just paste.",
+            collapsed=True,
         )
         card.grid_columnconfigure(1, weight=1)
         self._manual_row(card, 0, "Create the physical (paper) folder", "Copy info", self.copy_info)

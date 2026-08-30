@@ -52,7 +52,8 @@ Status legend: ✅ built (scaffold; will be tailored to her real files) · 🟡 
 | 32 | Sync-status visibility (✓ / ☁ / ⏳) | ✅ | reads cloud file attributes; shown on Home |
 | 33 | Convert document → PDF | ✅ | Word/LibreOffice; "Also save a PDF" + standalone |
 | 34 | Dark mode by default + theme-aware tables | ✅ | no white glare; light/system available |
-| 35 | Collapsible sections (declutter primitive) | 🟡 | built; apply per-panel with her input |
+| 35 | Collapsible sections + panel declutter | ✅ | secondary sections collapsed on Home, New Project, Job, Settings, Financials; fine-tune with her |
+| 38 | Coloring tool (marker → free-draw / coloring pages) | ✅ | upload pages, color with palette, Clear/Save |
 | 36 | Color menu (text hex) + draw-on-screen mode | ✅ | pencil/marker, click clears & exits, input blocked |
 | 37 | Headless GUI audit (every panel, under Xvfb) | ✅ | 23 GUI checks + 15 engine tests green |
 

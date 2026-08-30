@@ -150,7 +150,7 @@ class JobWorkspacePanel(BasePanel):
         self.run_async(work, done, busy="Building missing-fields report…")
 
     def _render_missing(self) -> None:
-        card = self.card("Missing data", "Scan this job's folder for required documents and info.")
+        card = self.collapsible_card("Missing data", "Scan this job's folder for required documents and info.", collapsed=True)
         card.grid_columnconfigure(0, weight=1)
         self.primary_button(card, "🔍  Scan for missing items", self.scan_missing, width=220).grid(
             row=0, column=0, sticky="w")
@@ -159,8 +159,9 @@ class JobWorkspacePanel(BasePanel):
         self.missing_area.grid_columnconfigure(0, weight=1)
 
     def _render_letters(self) -> None:
-        card = self.card("Generate a letter / document",
-                         "Pick a template — it fills from this job and saves into Correspondence.")
+        card = self.collapsible_card("Generate a letter / document",
+                                     "Pick a template — it fills from this job and saves into Correspondence.",
+                                     collapsed=True)
         card.grid_columnconfigure(0, weight=1)
         rowf = ctk.CTkFrame(card, fg_color="transparent")
         rowf.grid(row=0, column=0, sticky="ew")

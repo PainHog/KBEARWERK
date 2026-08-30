@@ -229,7 +229,7 @@ class DashboardPanel(BasePanel):
 
     # -- recent activity -------------------------------------------------
     def _build_recent(self) -> None:
-        self.recent_card = self.card("Recent activity")
+        self.recent_card = self.collapsible_card("Recent activity", collapsed=True)
         self.recent_card.grid_columnconfigure(0, weight=1)
         self.recent_holder = ctk.CTkFrame(self.recent_card, fg_color="transparent")
         self.recent_holder.grid(row=0, column=0, sticky="ew")
@@ -255,7 +255,7 @@ class DashboardPanel(BasePanel):
 
     # -- setup / sync ----------------------------------------------------
     def _build_setup_status(self) -> None:
-        self.status_card = self.card("Setup & sync", "Point the app at her real folders and lists.")
+        self.status_card = self.collapsible_card("Setup & sync", "Point the app at her real folders and lists.", collapsed=True)
         self.status_card.grid_columnconfigure(0, weight=1)
         self._status_rows = ctk.CTkFrame(self.status_card, fg_color="transparent")
         self._status_rows.grid(row=0, column=0, sticky="ew")

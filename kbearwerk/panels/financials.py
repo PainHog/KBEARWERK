@@ -76,8 +76,9 @@ class FinancialsPanel(BasePanel):
 
     # -- invoice a job ---------------------------------------------------
     def _build_invoice(self) -> None:
-        card = self.card("Bill a job → ledger + invoice",
-                         "Add an entry to the ledger and generate the invoice. Email is drafted for review.")
+        card = self.collapsible_card("Bill a job → ledger + invoice",
+                                     "Add an entry to the ledger and generate the invoice. Email is drafted for review.",
+                                     collapsed=True)
         card.grid_columnconfigure((1, 3), weight=1)
         self.inv_fields = {}
         self._inv_field(card, 0, 0, "number", "Project #")

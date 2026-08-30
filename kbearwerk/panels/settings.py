@@ -80,7 +80,7 @@ class SettingsPanel(BasePanel):
 
     # -- folder template -------------------------------------------------
     def _build_folder_template(self) -> None:
-        card = self.card("Job folder sub-folders", "One per line — created inside every new job folder.")
+        card = self.collapsible_card("Job folder sub-folders", "One per line — created inside every new job folder.", collapsed=True)
         card.grid_columnconfigure(0, weight=1)
         self.template_box = ctk.CTkTextbox(card, height=140)
         self.template_box.insert("1.0", "\n".join(self.config.get("folder_template", [])))
@@ -88,7 +88,7 @@ class SettingsPanel(BasePanel):
 
     # -- people ----------------------------------------------------------
     def _build_people(self) -> None:
-        card = self.card("People (contacts)", "She picks people by nickname — the email is used quietly when sending.")
+        card = self.collapsible_card("People (contacts)", "She picks people by nickname — the email is used quietly when sending.", collapsed=True)
         card.grid_columnconfigure(0, weight=1)
         self.people_holder = ctk.CTkFrame(card, fg_color="transparent")
         self.people_holder.grid(row=0, column=0, sticky="ew")
@@ -144,7 +144,7 @@ class SettingsPanel(BasePanel):
 
     # -- engineer seals --------------------------------------------------
     def _build_seals(self) -> None:
-        card = self.card("Engineer seals", "Signature + seal images, applied only on 'Seal & Save'. Kept on this PC.")
+        card = self.collapsible_card("Engineer seals", "Signature + seal images, applied only on 'Seal & Save'. Kept on this PC.", collapsed=True)
         card.grid_columnconfigure(0, weight=1)
         self.seals_holder = ctk.CTkFrame(card, fg_color="transparent")
         self.seals_holder.grid(row=0, column=0, sticky="ew")
@@ -211,7 +211,7 @@ class SettingsPanel(BasePanel):
 
     # -- email -----------------------------------------------------------
     def _build_email(self) -> None:
-        card = self.card("Boss's inbox monitoring", "Reads the classic Outlook desktop app locally — nothing leaves the PC.")
+        card = self.collapsible_card("Boss's inbox monitoring", "Reads the classic Outlook desktop app locally — nothing leaves the PC.", collapsed=True)
         card.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(card, text="Mailbox name", font=theme.FONT_BODY).grid(row=0, column=0, sticky="w", padx=(0, 8), pady=4)
         self.mailbox_entry = ctk.CTkEntry(card, height=30)
@@ -236,7 +236,7 @@ class SettingsPanel(BasePanel):
 
     # -- urls / company --------------------------------------------------
     def _build_urls_company(self) -> None:
-        card = self.card("Websites & company")
+        card = self.collapsible_card("Websites & company", collapsed=True)
         card.grid_columnconfigure(1, weight=1)
         ctk.CTkLabel(card, text="Monograph URL", font=theme.FONT_BODY).grid(row=0, column=0, sticky="w", padx=(0, 8), pady=4)
         self.monograph_entry = ctk.CTkEntry(card, height=30)
@@ -264,7 +264,7 @@ class SettingsPanel(BasePanel):
 
     # -- appearance ------------------------------------------------------
     def _build_appearance(self) -> None:
-        card = self.card("Appearance")
+        card = self.collapsible_card("Appearance", collapsed=True)
         card.grid_columnconfigure(0, weight=1)
         self.appearance_menu = ctk.CTkOptionMenu(card, values=["light", "dark", "system"], width=160)
         self.appearance_menu.set(self.config.get("appearance", "light"))
