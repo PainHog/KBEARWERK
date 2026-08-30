@@ -20,6 +20,7 @@ PATH_FIELDS = [
     ("redline_log", "Redline Log"),
     ("drafting_list", "Drafting List"),
     ("observations_log", "Observations / Inspection workbook"),
+    ("invoice_ledger", "Invoice Ledger"),
 ]
 
 

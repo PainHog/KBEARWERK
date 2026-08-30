@@ -12,7 +12,7 @@ os.environ.setdefault("KBEARWERK_CONFIG_DIR", tempfile.mkdtemp(prefix="kbw_cfg_"
 from kbearwerk import config
 from kbearwerk.services import (files, excel, reliable, outbox, search, checklist,
                                 billing, jobdata, activity, fieldscan, extract,
-                                templates)
+                                templates, invoices, people)
 
 
 def _work():
@@ -115,6 +115,23 @@ def test_checklist_scan():
     present = {d.label: d.present for d in needs.documents}
     assert present["Signed Proposal"] and not present["Calcs"]
     assert needs.missing_info == ["Billing rate confirmed"]
+
+
+def test_held_invoices():
+    work = _work()
+    path = os.path.join(work, "ledger.xlsx")
+    excel.ensure_workbook(path, ["Invoice", "Client", "Amount", "Status", "Notes"])
+    excel.append_row(path, {"Invoice": "1001", "Client": "Acme", "Amount": "5000", "Status": "Sent", "Notes": ""})
+    excel.append_row(path, {"Invoice": "1002", "Client": "Beta", "Amount": "2000", "Status": "HELD", "Notes": "HELD - Carl"})
+    cfg = config.default_config()
+    cfg["paths"]["invoice_ledger"] = path
+    cfg["contacts"] = [{"nickname": "Carl", "email": "carl@firm.com", "role": "drafter"}]
+    held = invoices.load_held(cfg)
+    assert len(held) == 1
+    assert held[0].invoice == "1002" and held[0].engineer == "Carl"
+    groups = invoices.group_by_engineer(held)
+    assert "Carl" in groups
+    assert people.resolve_email(cfg, "Carl") == "carl@firm.com"
 
 
 def test_billing_summary():

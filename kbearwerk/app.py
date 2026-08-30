@@ -24,6 +24,7 @@ from .panels.needed import NeededPanel
 from .panels.meeting_checklist import MeetingChecklistPanel
 from .panels.schedule import SchedulePanel
 from .panels.billing import BillingPanel
+from .panels.invoices import InvoicesPanel
 from .panels.settings import SettingsPanel
 
 # Optional real OS drag-and-drop (bundled with the .exe). Degrades gracefully.
@@ -45,6 +46,7 @@ NAV = [
     ("observations", "Observations", "\U0001F50D", ObservationsPanel),
     ("needed", "Needed", "\U0001F4CC", NeededPanel),
     ("billing", "Billing", "\U0001F4B5", BillingPanel),
+    ("invoices", "Held Invoices", "\U0001F9FE", InvoicesPanel),
     ("meeting", "Meeting Checklist", "✅", MeetingChecklistPanel),
     ("schedule", "Schedule", "\U0001F4C5", SchedulePanel),
     ("settings", "Settings", "⚙️", SettingsPanel),

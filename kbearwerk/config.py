@@ -54,6 +54,16 @@ DEFAULTS: Dict[str, Any] = {
         "redline_log": "",
         "drafting_list": "",
         "observations_log": "",
+        "invoice_ledger": "",
+    },
+    # Held-invoice reminders. The ledger marks held invoices with one of these
+    # terms (in a Status or Notes column); the engineer's nickname sits in the
+    # notes next to it. Emails are DRAFTED (never auto-sent) until send_emails is
+    # turned on after testing.
+    "invoices": {
+        "held_terms": ["held", "hold", "on hold"],
+        "send_emails": False,
+        "sheet": "",
     },
     # Documents every job folder should contain. The app scans the folder and
     # marks each item found/missing by looking for these keywords in file names.
