@@ -23,3 +23,15 @@ Thumbs.db
 # Local scratch / test output
 scratchpad/
 *.tmp
+
+# Her real office files live here for the session only — NEVER committed.
+# (We read them, extract the structure into config/templates, and keep the
+#  raw files out of git for privacy.)
+samples/
+*.xlsx
+*.xlsm
+*.xls
+*.docx
+*.dotx
+*.pdf
+
